@@ -11,7 +11,7 @@ import SwiftUI
 struct GBEmuApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RomSelectingView()
         }
     }
 }
