@@ -47,10 +47,10 @@ class EmulatorLoop {
             // Emulate one frame worth of CPU cycles
             var cycles = 0
             while cycles < cyclesPerFrame {
-                let c = cpu.step() // returns cycles used by instruction
-                ppu.step(cycles: c)
+                let cyclesThisOp = cpu.step() // returns cycles used by instruction
+                ppu.step(cycles: cyclesThisOp)
                 // TODO: timers, interrupts
-                cycles += c
+                cycles += cyclesThisOp
             }
 
             // Trigger frame draw (on main thread if using UI)

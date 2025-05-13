@@ -16,9 +16,9 @@ struct Rom: Identifiable {
 }
 
 struct RomSelectingView: View {
-//    var roms: [Rom] = [
-//        .init(title: "cpu_instrs", url: Bundle.main.url(forResource: "cpu_instrs", withExtension: "bg")!),
-//    ]
+    var roms: [Rom] = [
+        .init(title: "cpu_instrs", url: Bundle.main.url(forResource: "cpu_instrs", withExtension: "gb")!),
+    ]
 
     @State private var importFile: Bool = false
     @State private var romData: Data?
@@ -30,13 +30,13 @@ struct RomSelectingView: View {
         NavigationStack {
             List {
                 Section {
-//                    ForEach(roms) { rom in
-//                        NavigationLink(rom.title) {
-//                            let data = try! Data(contentsOf: rom.url)
-//                            EmptyView()
-//                                .navigationTitle(rom.title)
-//                        }
-//                    }
+                    ForEach(roms) { rom in
+                        NavigationLink(rom.title) {
+                            let data = try! Data(contentsOf: rom.url)
+                            EmulatorView(rom: data)
+                                .navigationTitle(rom.title)
+                        }
+                    }
                     Button {
                         importFile = true
                     } label: {
