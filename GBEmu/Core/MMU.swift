@@ -7,18 +7,35 @@
 
 import Foundation
 
+enum Interrupt: UInt8 {
+    /// V-Blank (bit 0)
+    case vblank   = 0
+    /// LCD STAT  (bit 1)
+    case lcdStat  = 1
+    /// Timer     (bit 2)
+    case timer    = 2
+    /// Serial    (bit 3)
+    case serial   = 3
+    /// Joypad    (bit 4)
+    case joypad   = 4
+
+    /// The mask to set/test this interrupt in IF/IE
+    var mask: UInt8 { 1 << rawValue }
+}
+
 class MMU {
-    private var rom: [UInt8]
-    private var ram: [UInt8] = Array(repeating: 0, count: 0x2000)
+    private let memoryBankController: MBC
     var vram: [UInt8] = Array(repeating: 0, count: 0x2000)
     private var wram: [UInt8] = Array(repeating: 0, count: 0x2000)
-    private var oam: [UInt8] = Array(repeating: 0, count: 0xA0)
+    var oam: [UInt8] = Array(repeating: 0, count: 0xA0)
     private var hram: [UInt8] = Array(repeating: 0, count: 0x7F)
     private var io: [UInt8] = Array(repeating: 0, count: 0x80)
     private var interruptEnable: UInt8 = 0
 
     private var localJoypadState: UInt8 = 0xFF
     private let inputQueue = DispatchQueue(label: "com.gbemu.input")
+
+    private let interruptFlagAddr: UInt16 = 0xFF0F
 
     /// Bits 0–3 reflect the physical button state (0=pressed, 1=released)
     /// Bit 0 = A, 1 = B, 2 = Select, 3 = Start, 4 = Right, 5 = Left, 6 = Up, 7 = Down
@@ -28,14 +45,20 @@ class MMU {
     }
 
     init(rom: [UInt8]) {
-        self.rom = rom
+        memoryBankController = .init(rom: rom)
+    }
+
+    subscript(address: UInt16) -> UInt8 {
+        get { read(address) }
+        set { write(newValue, to: address) }
     }
 
     func read(_ address: UInt16) -> UInt8 {
         switch address {
-        case 0x0000...0x7FFF: return rom[Int(address)]
+        case 0x0000...0x7FFF, 0xA000...0xBFFF:
+            return memoryBankController.read(address)    // External RAM
+            
         case 0x8000...0x9FFF: return vram[Int(address - 0x8000)]
-        case 0xA000...0xBFFF: return ram[Int(address - 0xA000)]
         case 0xC000...0xDFFF: return wram[Int(address - 0xC000)]
         case 0xE000...0xFDFF: return wram[Int(address - 0xE000)] // echo
         case 0xFE00...0xFE9F: return oam[Int(address - 0xFE00)]
@@ -64,19 +87,18 @@ class MMU {
 
     func write(_ value: UInt8, to address: UInt16) {
         switch address {
+        // ROM adresses
+        case 0x0000...0x7FFF, 0xA000...0xBFFF:
+            memoryBankController.write(value, to: address)
+
+        // Internal RAM adresses
+        case 0xC000...0xDFFF: wram[Int(address - 0xC000)] = value
         case 0x8000...0x9FFF: vram[Int(address - 0x8000)] = value
-        case 0xA000...0xBFFF: ram[Int(address - 0xA000)] = value
-        case 0xC000...0xDFFF:
-            wram[Int(address - 0xC000)] = value
-            if address == 0xC000 {
-                print("Test result: \(value == rom[0x4000] ? "Passed" : "Failed")")
-                print("")
-            }
         case 0xE000...0xFDFF: wram[Int(address - 0xE000)] = value
         case 0xFE00...0xFE9F: oam[Int(address - 0xFE00)] = value
         case 0xFF00...0xFF7F:
-
             io[Int(address - 0xFF00)] = value
+//            print(String(format: "IO-WRITE @%04X ← %02X", address, value))
 
             if address == 0xFF00 {
                 // CPU is selecting which half of the pad it wants to read:
@@ -101,5 +123,10 @@ class MMU {
         case 0xFFFF: interruptEnable = value
         default: break
         }
+    }
+
+    func requestInterrupt(_ interrupt: Interrupt) {
+        let currentFlags = read(interruptFlagAddr)
+        write(currentFlags | interrupt.mask, to: interruptFlagAddr)
     }
 }

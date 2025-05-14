@@ -14,12 +14,15 @@ class EmulatorLoop {
     private let targetFPS: Double = 60.0
     private let cyclesPerFrame = 70224
 
+    private let render: ([UInt32]) -> Void
+
     let cpu: CPU
     let ppu: PPU
 
-    init(cpu: CPU, ppu: PPU) {
+    init(cpu: CPU, ppu: PPU, render: @escaping ([UInt32]) -> Void) {
         self.cpu = cpu
         self.ppu = ppu
+        self.render = render
     }
 
     func start() {
@@ -62,7 +65,7 @@ class EmulatorLoop {
             }
 
             // 4) Render the framebuffer (on main thread if needed)
-            // DispatchQueue.main.async { render(ppu.framebuffer) }
+            DispatchQueue.main.async { [self] in render(ppu.framebuffer) }
         }
     }
 }

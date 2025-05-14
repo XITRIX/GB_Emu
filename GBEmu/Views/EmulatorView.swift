@@ -9,6 +9,8 @@ import SwiftUI
 
 @Observable
 class EmulatorViewModel {
+    var imageData: ImageData = .init()
+
     var joypadState: UInt8 = 0xFF {
         didSet {
             emu.joypadState = joypadState
@@ -16,7 +18,9 @@ class EmulatorViewModel {
     }
 
     init(rom: Data) {
-        emu = .init(rom: rom)
+        emu = .init(rom: rom) { framebuffer in
+            self.imageData.data = framebuffer
+        }
     }
 
     func start() {
@@ -25,7 +29,7 @@ class EmulatorViewModel {
 
     func stop() {}
 
-    private let emu: Emu
+    private var emu: Emu!
 }
 
 struct EmulatorView: View {
@@ -38,7 +42,7 @@ struct EmulatorView: View {
 
     var body: some View {
         VStack {
-            EmptyView()
+            PixelImageView(pixels: $viewModel.imageData)
                 .frame(width: 320, height: 240)
 
             KeyboardView(keysInput: $viewModel.joypadState)

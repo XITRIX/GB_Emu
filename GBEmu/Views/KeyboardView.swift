@@ -13,16 +13,16 @@ struct KeyboardView: View {
     var body: some View {
         VStack {
             HStack {
-                KeyboardButton(keysInput: $keysInput, index: 1 << 0)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 1)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 2)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 3)
+                KeyboardButton(keysInput: $keysInput, index: 1 << 0, label: "A")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 1, label: "B")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 2, label: "Select")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 3, label: "Start")
             }
             HStack {
-                KeyboardButton(keysInput: $keysInput, index: 1 << 4)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 5)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 6)
-                KeyboardButton(keysInput: $keysInput, index: 1 << 7)
+                KeyboardButton(keysInput: $keysInput, index: 1 << 4, label: "R")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 5, label: "L")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 6, label: "U")
+                KeyboardButton(keysInput: $keysInput, index: 1 << 7, label: "D")
             }
         }
     }
@@ -31,12 +31,13 @@ struct KeyboardView: View {
 struct KeyboardButton: View {
     @Binding var keysInput: UInt8
     let index: UInt8
+    let label: String
 
     var body: some View {
         Button {
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         } label: {
-            Text(String(format: "%01X", index))
+            Text(label)
                 .frame(width: 54, height: 54)
         }
         .buttonRepeatBehavior(.enabled)

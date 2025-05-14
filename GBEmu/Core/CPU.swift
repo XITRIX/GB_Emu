@@ -260,6 +260,71 @@ enum CBOpcode: UInt8 {
     case bit7L = 0x7D
     case bit7_HL = 0x7E
     case bit7A = 0x7F
+    case res0B = 0x80
+    case res0C = 0x81
+    case res0D = 0x82
+    case res0E = 0x83
+    case res0H = 0x84
+    case res0L = 0x85
+    case res0_HL = 0x86
+    case res0A = 0x87
+    case res1B = 0x88
+    case res1C = 0x89
+    case res1D = 0x8A
+    case res1E = 0x8B
+    case res1H = 0x8C
+    case res1L = 0x8D
+    case res1_HL = 0x8E
+    case res1A = 0x8F
+    case res2B = 0x90
+    case res2C = 0x91
+    case res2D = 0x92
+    case res2E = 0x93
+    case res2H = 0x94
+    case res2L = 0x95
+    case res2_HL = 0x96
+    case res2A = 0x97
+    case res3B = 0x98
+    case res3C = 0x99
+    case res3D = 0x9A
+    case res3E = 0x9B
+    case res3H = 0x9C
+    case res3L = 0x9D
+    case res3_HL = 0x9E
+    case res3A = 0x9F
+    case res4B = 0xA0
+    case res4C = 0xA1
+    case res4D = 0xA2
+    case res4E = 0xA3
+    case res4H = 0xA4
+    case res4L = 0xA5
+    case res4_HL = 0xA6
+    case res4A = 0xA7
+    case res5B = 0xA8
+    case res5C = 0xA9
+    case res5D = 0xAA
+    case res5E = 0xAB
+    case res5H = 0xAC
+    case res5L = 0xAD
+    case res5_HL = 0xAE
+    case res5A = 0xAF
+    case res6B = 0xB0
+    case res6C = 0xB1
+    case res6D = 0xB2
+    case res6E = 0xB3
+    case res6H = 0xB4
+    case res6L = 0xB5
+    case res6_HL = 0xB6
+    case res6A = 0xB7
+    case res7B = 0xB8
+    case res7C = 0xB9
+    case res7D = 0xBA
+    case res7E = 0xBB
+    case res7H = 0xBC
+    case res7L = 0xBD
+    case res7_HL = 0xBE
+    case res7A = 0xBF
+//    case set0B = 0xC0
 }
 
 // MARK: - Opcode Execution
@@ -852,10 +917,7 @@ private extension CPU {
             let address = fetch2Bytes()
 
             // Push current PC (which points to next instruction) onto the stack
-            SP &-= 1
-            mmu.write(UInt8((PC >> 8) & 0xFF), to: SP) // High byte
-            SP &-= 1
-            mmu.write(UInt8(PC & 0xFF), to: SP) // Low byte
+            push16(PC)
 
             // Jump to address
             PC = address
@@ -863,10 +925,7 @@ private extension CPU {
         case .callNZ_a16:
             let address = fetch2Bytes()
             if !Z {
-                SP &-= 1
-                mmu.write(UInt8((PC >> 8) & 0xFF), to: SP) // High byte
-                SP &-= 1
-                mmu.write(UInt8(PC & 0xFF), to: SP) // Low byte
+                push16(PC)
 
                 // Jump to address
                 PC = address
@@ -906,40 +965,16 @@ private extension CPU {
             interruptMasterEnable = true
             return 4
         case .pushAF:
-            let af = AF
-
-            SP &-= 1
-            mmu.write(UInt8((af >> 8) & 0xFF), to: SP)
-            SP &-= 1
-            mmu.write(UInt8(af & 0xFF), to: SP)
-
+            push16(AF)
             return 4
         case .pushBC:
-            let bc = BC
-
-            SP &-= 1
-            mmu.write(UInt8((bc >> 8) & 0xFF), to: SP)
-            SP &-= 1
-            mmu.write(UInt8(bc & 0xFF), to: SP)
-
+            push16(BC)
             return 4
         case .pushDE:
-            let de = DE
-
-            SP &-= 1
-            mmu.write(UInt8((de >> 8) & 0xFF), to: SP)
-            SP &-= 1
-            mmu.write(UInt8(de & 0xFF), to: SP)
-
+            push16(DE)
             return 4
         case .pushHL:
-            let hl = HL
-
-            SP &-= 1
-            mmu.write(UInt8((hl >> 8) & 0xFF), to: SP)
-            SP &-= 1
-            mmu.write(UInt8(hl & 0xFF), to: SP)
-
+            push16(HL)
             return 4
         case .popAF:
             AF = pop16()
@@ -1359,6 +1394,134 @@ private extension CPU {
             return testBit(7, in: mmu.read(HL)) + 1
         case .bit7A:
             return testBit(7, in: registers[.A]!)
+        case .res0B:
+            return resetBit(0, in: &registers[.B]!)
+        case .res0C:
+            return resetBit(0, in: &registers[.C]!)
+        case .res0D:
+            return resetBit(0, in: &registers[.D]!)
+        case .res0E:
+            return resetBit(0, in: &registers[.E]!)
+        case .res0H:
+            return resetBit(0, in: &registers[.H]!)
+        case .res0L:
+            return resetBit(0, in: &registers[.L]!)
+        case .res0_HL:
+            return resetBit(0, in: &mmu[HL]) + 2
+        case .res0A:
+            return resetBit(0, in: &registers[.A]!)
+        case .res1B:
+            return resetBit(1, in: &registers[.B]!)
+        case .res1C:
+            return resetBit(1, in: &registers[.C]!)
+        case .res1D:
+            return resetBit(1, in: &registers[.D]!)
+        case .res1E:
+            return resetBit(1, in: &registers[.E]!)
+        case .res1H:
+            return resetBit(1, in: &registers[.H]!)
+        case .res1L:
+            return resetBit(1, in: &registers[.L]!)
+        case .res1_HL:
+            return resetBit(1, in: &mmu[HL]) + 2
+        case .res1A:
+            return resetBit(1, in: &registers[.A]!)
+        case .res2B:
+            return resetBit(2, in: &registers[.B]!)
+        case .res2C:
+            return resetBit(2, in: &registers[.C]!)
+        case .res2D:
+            return resetBit(2, in: &registers[.D]!)
+        case .res2E:
+            return resetBit(2, in: &registers[.E]!)
+        case .res2H:
+            return resetBit(2, in: &registers[.H]!)
+        case .res2L:
+            return resetBit(2, in: &registers[.L]!)
+        case .res2_HL:
+            return resetBit(2, in: &mmu[HL]) + 2
+        case .res2A:
+            return resetBit(2, in: &registers[.A]!)
+        case .res3B:
+            return resetBit(3, in: &registers[.B]!)
+        case .res3C:
+            return resetBit(3, in: &registers[.C]!)
+        case .res3D:
+            return resetBit(3, in: &registers[.D]!)
+        case .res3E:
+            return resetBit(3, in: &registers[.E]!)
+        case .res3H:
+            return resetBit(3, in: &registers[.H]!)
+        case .res3L:
+            return resetBit(3, in: &registers[.L]!)
+        case .res3_HL:
+            return resetBit(3, in: &mmu[HL]) + 2
+        case .res3A:
+            return resetBit(3, in: &registers[.A]!)
+        case .res4B:
+            return resetBit(4, in: &registers[.B]!)
+        case .res4C:
+            return resetBit(4, in: &registers[.C]!)
+        case .res4D:
+            return resetBit(4, in: &registers[.D]!)
+        case .res4E:
+            return resetBit(4, in: &registers[.E]!)
+        case .res4H:
+            return resetBit(4, in: &registers[.H]!)
+        case .res4L:
+            return resetBit(4, in: &registers[.L]!)
+        case .res4_HL:
+            return resetBit(4, in: &mmu[HL]) + 2
+        case .res4A:
+            return resetBit(4, in: &registers[.A]!)
+        case .res5B:
+            return resetBit(5, in: &registers[.B]!)
+        case .res5C:
+            return resetBit(5, in: &registers[.C]!)
+        case .res5D:
+            return resetBit(5, in: &registers[.D]!)
+        case .res5E:
+            return resetBit(5, in: &registers[.E]!)
+        case .res5H:
+            return resetBit(5, in: &registers[.H]!)
+        case .res5L:
+            return resetBit(5, in: &registers[.L]!)
+        case .res5_HL:
+            return resetBit(5, in: &mmu[HL]) + 2
+        case .res5A:
+            return resetBit(5, in: &registers[.A]!)
+        case .res6B:
+            return resetBit(6, in: &registers[.B]!)
+        case .res6C:
+            return resetBit(6, in: &registers[.C]!)
+        case .res6D:
+            return resetBit(6, in: &registers[.D]!)
+        case .res6E:
+            return resetBit(6, in: &registers[.E]!)
+        case .res6H:
+            return resetBit(6, in: &registers[.H]!)
+        case .res6L:
+            return resetBit(6, in: &registers[.L]!)
+        case .res6_HL:
+            return resetBit(6, in: &mmu[HL]) + 2
+        case .res6A:
+            return resetBit(6, in: &registers[.A]!)
+        case .res7B:
+            return resetBit(7, in: &registers[.B]!)
+        case .res7C:
+            return resetBit(7, in: &registers[.C]!)
+        case .res7D:
+            return resetBit(7, in: &registers[.D]!)
+        case .res7E:
+            return resetBit(7, in: &registers[.E]!)
+        case .res7H:
+            return resetBit(7, in: &registers[.H]!)
+        case .res7L:
+            return resetBit(7, in: &registers[.L]!)
+        case .res7_HL:
+            return resetBit(7, in: &mmu[HL]) + 2
+        case .res7A:
+            return resetBit(7, in: &registers[.A]!)
         case .none:
             print("Unknown CB opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
             halted = true
@@ -1369,6 +1532,11 @@ private extension CPU {
     func testBit(_ b: Int, in value: UInt8) -> Int {
         let bit = (value >> b) & 1 == 1
         setFlags(z: !bit, n: false, h: true, c: C)
+        return 2
+    }
+
+    func resetBit(_ b: Int, in memory: inout UInt8) -> Int {
+        memory = memory & ~(1 << b)
         return 2
     }
 }
@@ -1391,7 +1559,19 @@ class CPU {
     private(set) var halted = false
     private(set) var stopped = false
 
-    // MARK: - Helpers
+    // Interrupt vectors (in bytes)
+    private let interruptVectors: [UInt16] = [
+        0x40,  // V-Blank
+        0x48,  // LCD STAT
+        0x50,  // Timer
+        0x58,  // Serial
+        0x60   // Joypad
+    ]
+}
+
+// MARK: - Helpers
+private extension CPU {
+    // MARK: - Registers
     var AF: UInt16 {
         get { (UInt16(registers[.A]!) << 8) | UInt16(registers[.F]!) }
         set {
@@ -1424,6 +1604,7 @@ class CPU {
         }
     }
 
+    // MARK: - Regiter Flags
     func setFlags(z: Bool, n: Bool, h: Bool, c: Bool) {
         Z = z
         N = n
@@ -1455,6 +1636,7 @@ class CPU {
         set { registers[.F]! = newValue ? (registers[.F]! | 0b0001_0000) : (registers[.F]! & 0b1110_1111) }
     }
 
+    // MARK: - Memory
     func readByte(at address: UInt16) -> UInt8 {
         return mmu.read(address)
     }
@@ -1475,18 +1657,22 @@ class CPU {
         return UInt16(high) << 8 | UInt16(low)
     }
 
+    // MARK: - Stack
     func pop16() -> UInt16 {
         let low  = mmu.read(SP); SP &+= 1
         let high = mmu.read(SP); SP &+= 1
         return (UInt16(high) << 8) | UInt16(low)
     }
 
-    // MARK: - Step
-    func step() -> Int {
-        return executeNextInstruction() * 4
+    func push16(_ data: UInt16) {
+        SP &-= 1
+        mmu.write(UInt8((data >> 8) & 0xFF), to: SP) // High byte
+        SP &-= 1
+        mmu.write(UInt8(data & 0xFF), to: SP) // Low byte
     }
 
-    private func logState(opcode: UInt8) {
+    // MARK: - Utils
+    func logState(opcode: UInt8) {
 //        return
 
         let flags = registers[.F]!
@@ -1506,6 +1692,14 @@ class CPU {
 }
 
 extension CPU {
+    // MARK: - Step
+    func step() -> Int {
+        var stepCount = 0
+        stepCount += serviceInterruptsIfNeeded()
+        stepCount += executeNextInstruction()
+        return stepCount * 4
+    }
+
     func checkStopState() -> Bool {
         if stopped {
             // spin (or sleep) until a key-press un-stops us
@@ -1523,5 +1717,45 @@ extension CPU {
 
     private var isButtonDown: Bool {
         mmu.joypadState != 0xFF
+    }
+}
+
+private extension CPU {
+    /// Checks IF & IE & IME, and if any interrupt is pending:
+    /// 1. disables IME
+    /// 2. clears that IF bit
+    /// 3. pushes PC onto the stack
+    /// 4. jumps to the appropriate vector
+    func serviceInterruptsIfNeeded() -> Int {
+        // 1) only if interrupts are enabled
+        guard interruptMasterEnable else { return 0 }
+
+        // 2) read the two registers
+        let ifReg = mmu.read(0xFF0F)    // Interrupt Flag
+        let ieReg = mmu.read(0xFFFF)    // Interrupt Enable
+
+        // 3) find any bit that is set in both IF and IE
+        let pending = ifReg & ieReg
+        guard pending != 0 else { return 0 }
+
+        // 4) from highest priority (bit0) to lowest (bit4), find the first one
+        let bit = UInt8(pending.trailingZeroBitCount)  // index of first set bit
+        let vector = interruptVectors[Int(bit)]
+
+        // 5) disable further interrupts until EI is executed again
+        interruptMasterEnable = false
+
+        // 6) clear the flag in IF
+        let newIf = ifReg & ~(1 << bit)
+        mmu.write(newIf, to: 0xFF0F)
+
+        // 7) push the current PC to the stack
+        push16(UInt16(PC & 0xFFFF))
+
+        // 8) jump to the interrupt handler
+        PC = vector
+
+        // 9) the interrupt takes 5 machine‐cycles (20 T-cycles)
+        return 5
     }
 }

@@ -19,6 +19,17 @@ struct RomSelectingView: View {
     var roms: [Rom] = [
         .init(title: "cpu_instrs", url: Bundle.main.url(forResource: "cpu_instrs", withExtension: "gb")!),
         .init(title: "01-special", url: Bundle.main.url(forResource: "01-special", withExtension: "gb")!),
+        .init(title: "02-interrupts", url: Bundle.main.url(forResource: "02-interrupts", withExtension: "gb")!),
+        .init(title: "03-op sp,hl", url: Bundle.main.url(forResource: "03-op sp,hl", withExtension: "gb")!),
+        .init(title: "04-op r,imm", url: Bundle.main.url(forResource: "04-op r,imm", withExtension: "gb")!),
+        .init(title: "05-op rp", url: Bundle.main.url(forResource: "05-op rp", withExtension: "gb")!),
+        .init(title: "06-ld r,r", url: Bundle.main.url(forResource: "06-ld r,r", withExtension: "gb")!),
+        .init(title: "07-jr,jp,call,ret,rst", url: Bundle.main.url(forResource: "07-jr,jp,call,ret,rst", withExtension: "gb")!),
+        .init(title: "08-misc instrs", url: Bundle.main.url(forResource: "08-misc instrs", withExtension: "gb")!),
+        .init(title: "09-op r,r", url: Bundle.main.url(forResource: "09-op r,r", withExtension: "gb")!),
+        .init(title: "10-bit ops", url: Bundle.main.url(forResource: "10-bit ops", withExtension: "gb")!),
+        .init(title: "11-op a,(hl)", url: Bundle.main.url(forResource: "11-op a,(hl)", withExtension: "gb")!),
+        .init(title: "2048", url: Bundle.main.url(forResource: "2048", withExtension: "gb")!),
     ]
 
     @State private var importFile: Bool = false
