@@ -18,6 +18,7 @@ struct Rom: Identifiable {
 struct RomSelectingView: View {
     var roms: [Rom] = [
         .init(title: "cpu_instrs", url: Bundle.main.url(forResource: "cpu_instrs", withExtension: "gb")!),
+        .init(title: "01-special", url: Bundle.main.url(forResource: "01-special", withExtension: "gb")!),
     ]
 
     @State private var importFile: Bool = false

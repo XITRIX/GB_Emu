@@ -34,6 +34,7 @@ class EmulatorLoop {
 
     private func runLoop() {
         while running {
+            // 1) Frame pacing
             let now = DispatchTime.now()
             let delta = Double(now.uptimeNanoseconds - lastTime.uptimeNanoseconds) / 1_000_000_000
             if delta < (1.0 / targetFPS) {
@@ -44,16 +45,24 @@ class EmulatorLoop {
 
             lastTime = now
 
-            // Emulate one frame worth of CPU cycles
+            // 2) Run one frame’s worth of cycles
             var cycles = 0
             while cycles < cyclesPerFrame {
-                let cyclesThisOp = cpu.step() // returns cycles used by instruction
-                ppu.step(cycles: cyclesThisOp)
+                if cpu.stopped { break }
+
+                let used = cpu.step() // returns cycles used by instruction
+                ppu.step(cycles: used)
                 // TODO: timers, interrupts
-                cycles += cyclesThisOp
+                cycles += used
             }
 
-            // Trigger frame draw (on main thread if using UI)
+            // 3) Handle STOP state: completely suspend emulation
+            if !cpu.checkStopState() {
+                continue
+            }
+
+            // 4) Render the framebuffer (on main thread if needed)
+            // DispatchQueue.main.async { render(ppu.framebuffer) }
         }
     }
 }

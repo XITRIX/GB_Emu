@@ -9,6 +9,12 @@ import SwiftUI
 
 @Observable
 class EmulatorViewModel {
+    var joypadState: UInt8 = 0xFF {
+        didSet {
+            emu.joypadState = joypadState
+        }
+    }
+
     init(rom: Data) {
         emu = .init(rom: rom)
     }
@@ -31,7 +37,12 @@ struct EmulatorView: View {
     }
 
     var body: some View {
-        ZStack {}
+        VStack {
+            EmptyView()
+                .frame(width: 320, height: 240)
+
+            KeyboardView(keysInput: $viewModel.joypadState)
+        }
             .navigationBarTitleDisplayMode(.inline)
             .padding()
             .onAppear {
