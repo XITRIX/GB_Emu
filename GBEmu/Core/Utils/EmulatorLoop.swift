@@ -18,11 +18,13 @@ class EmulatorLoop {
 
     let cpu: CPU
     let ppu: PPU
+    let mmu: MMU
 
     init(cpu: CPU, ppu: PPU, render: @escaping ([UInt32]) -> Void) {
         self.cpu = cpu
         self.ppu = ppu
         self.render = render
+        self.mmu = cpu.mmu
     }
 
     func start() {
@@ -53,9 +55,11 @@ class EmulatorLoop {
             while cycles < cyclesPerFrame {
                 if cpu.stopped { break }
 
-                let used = cpu.step() // returns cycles used by instruction
+                var used = cpu.step() // returns cycles used by instruction
                 ppu.step(cycles: used)
+                mmu.step(cycles: used)
                 // TODO: timers, interrupts
+                used += cpu.serviceInterruptsIfNeeded()
                 cycles += used
             }
 

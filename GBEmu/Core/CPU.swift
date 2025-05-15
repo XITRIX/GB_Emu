@@ -105,6 +105,11 @@ enum Opcode: UInt8 {
     case ldA_HL = 0x7E
     case ldSP_HL = 0xF9
     case jp_a16 = 0xC3
+    case jpNZ_a16 = 0xC2
+    case jpNC_a16 = 0xD2
+    case jpZ_a16 = 0xCA
+    case jpC_a16 = 0xDA
+    case jpHL = 0xE9
     case jr_s8 = 0x18
     case jrNZ_r8 = 0x20
     case jrNC_r8 = 0x30
@@ -119,7 +124,33 @@ enum Opcode: UInt8 {
     case addA_HL = 0x86
     case addAA = 0x87
     case addA_d8 = 0xC6
+    case adcAB = 0x88
+    case adcAC = 0x89
+    case adcAD = 0x8A
+    case adcAE = 0x8B
+    case adcAH = 0x8C
+    case adcAL = 0x8D
+    case adc_HL = 0x8E
+    case adcAA = 0x8F
+    case adc_d8 = 0xCE
+    case subB = 0x90
+    case subC = 0x91
+    case subD = 0x92
+    case subE = 0x93
+    case subH = 0x94
+    case subL = 0x95
+    case sub_HL = 0x96
+    case subA = 0x97
     case sub_d8 = 0xD6
+    case andB = 0xA0
+    case andC = 0xA1
+    case andD = 0xA2
+    case andE = 0xA3
+    case andH = 0xA4
+    case andL = 0xA5
+    case and_HL = 0xA6
+    case andA = 0xA7
+    case and_d8 = 0xE6
     case xorB = 0xA8
     case xorC = 0xA9
     case xorD = 0xAA
@@ -135,8 +166,16 @@ enum Opcode: UInt8 {
     case orE = 0xB3
     case orH = 0xB4
     case orL = 0xB5
+    case or_HL = 0xB6
     case orA = 0xB7
-    case and_d8 = 0xE6
+    case rst0 = 0xC7
+    case rst1 = 0xCF
+    case rst2 = 0xD7
+    case rst3 = 0xDF
+    case rst4 = 0xE7
+    case rst5 = 0xEF
+    case rst6 = 0xF7
+    case rst7 = 0xFF
     case call_a16 = 0xCD
     case callNZ_a16 = 0xC4
     case retNZ = 0xC0
@@ -153,6 +192,14 @@ enum Opcode: UInt8 {
     case popDE = 0xD1
     case popHL = 0xE1
     case popAF = 0xF1
+    case addHL_BC = 0x09
+    case addHL_DE = 0x19
+    case addHL_HL = 0x29
+    case addHL_SP = 0x39
+    case decBC = 0x0B
+    case decDE = 0x1B
+    case decHL = 0x2B
+    case decSP = 0x3B
     case incB = 0x04
     case incD = 0x14
     case incH = 0x24
@@ -160,6 +207,7 @@ enum Opcode: UInt8 {
     case incE = 0x1C
     case incL = 0x2C
     case incA = 0x3C
+    case inc_HL = 0x34
     case decB = 0x05
     case decD = 0x15
     case decH = 0x25
@@ -167,6 +215,7 @@ enum Opcode: UInt8 {
     case decE = 0x1D
     case decL = 0x2D
     case decA = 0x3D
+    case dec_HL = 0x35
     case incBC = 0x03
     case incDE = 0x13
     case incHL = 0x23
@@ -625,6 +674,33 @@ private extension CPU {
         case .jp_a16: // JP a16
             PC = fetch2Bytes()
             return 4
+        case .jpNZ_a16:
+            PC = fetch2Bytes()
+            if !Z {
+                return 4
+            }
+            return 3
+        case .jpNC_a16:
+            PC = fetch2Bytes()
+            if !C {
+                return 4
+            }
+            return 3
+        case .jpZ_a16:
+            PC = fetch2Bytes()
+            if Z {
+                return 4
+            }
+            return 3
+        case .jpC_a16:
+            PC = fetch2Bytes()
+            if C {
+                return 4
+            }
+            return 3
+        case .jpHL:
+            PC = HL
+            return 1
         case .jr_s8:
             // Read signed 8-bit displacement
             let raw = fetchByte() // PC was incremented once for opcode fetch, now again for displacement
@@ -791,6 +867,219 @@ private extension CPU {
             C = sum16 > 0xFF
 
             return 2
+        case .adcAB:
+            let first = registers[.A]!
+            let second = registers[.B]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adcAC:
+            let first = registers[.A]!
+            let second = registers[.C]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adcAD:
+            let first = registers[.A]!
+            let second = registers[.D]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adcAE:
+            let first = registers[.A]!
+            let second = registers[.E]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adcAH:
+            let first = registers[.A]!
+            let second = registers[.H]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adcAL:
+            let first = registers[.A]!
+            let second = registers[.L]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adc_HL:
+            let first = registers[.A]!
+            let second = mmu.read(HL)
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 2
+        case .adcAA:
+            let first = registers[.A]!
+            let second = registers[.A]!
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 1
+        case .adc_d8:
+            let first = registers[.A]!
+            let second = fetchByte()
+            let carryIn: UInt8 = C ? 1 : 0
+
+            let sum16 = UInt16(first) + UInt16(second) + UInt16(carryIn)
+            let result = UInt8(sum16 & 0xFF)
+            registers[.A] = result
+
+            let h = ((first & 0x0F) + (second & 0x0F) + carryIn) > 0x0F
+            setFlags(z: result == 0, n: false, h: h, c: sum16 > 0xFF)
+
+            return 2
+        case .subB:
+            let oldA = registers[.A]!
+            let value = registers[.B]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .subC:
+            let oldA = registers[.A]!
+            let value = registers[.C]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .subD:
+            let oldA = registers[.A]!
+            let value = registers[.D]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .subE:
+            let oldA = registers[.A]!
+            let value = registers[.E]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .subH:
+            let oldA = registers[.A]!
+            let value = registers[.H]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .subL:
+            let oldA = registers[.A]!
+            let value = registers[.L]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
+        case .sub_HL:
+            let oldA = registers[.A]!
+            let value = mmu.read(HL)
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 2
+        case .subA:
+            let oldA = registers[.A]!
+            let value = registers[.A]!
+            let result = oldA &- value
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < (value & 0xF)
+            C = oldA < value
+
+            return 1
         case .sub_d8:
             let oldA = registers[.A]!
             let value = fetchByte()
@@ -803,6 +1092,38 @@ private extension CPU {
             C = oldA < value
 
             return 2
+        case .andB:
+            registers[.A]! &= registers[.B]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .andC:
+            registers[.A]! &= registers[.C]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .andD:
+            registers[.A]! &= registers[.D]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .andE:
+            registers[.A]! &= registers[.E]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .andH:
+            registers[.A]! &= registers[.H]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .andL:
+            registers[.A]! &= registers[.L]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
+        case .and_HL:
+            registers[.A]! &= mmu.read(HL)
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 2
+        case .andA:
+            registers[.A]! &= registers[.A]!
+            setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
+            return 1
         case .xorB: // XOR B
             let result = registers[.A]! ^ registers[.B]!
             registers[.A] = result
@@ -898,12 +1219,50 @@ private extension CPU {
             let zFlag: UInt8 = 1 << 7
             registers[.F] = (result == 0) ? zFlag : 0
             return 1
+        case .or_HL:
+            let result = registers[.A]! | mmu.read(HL)
+            registers[.A] = result
+            let zFlag: UInt8 = 1 << 7
+            registers[.F] = (result == 0) ? zFlag : 0
+            return 2
         case .orA:
             let result = registers[.A]!
 //            registers[.A] = result // It's the same
             let zFlag: UInt8 = 1 << 7
             registers[.F] = (result == 0) ? zFlag : 0
             return 1
+        case .rst0:
+            push16(PC)
+            PC = 0x0000
+            return 4
+        case .rst1:
+            push16(PC)
+            PC = 0x0008
+            return 4
+        case .rst2:
+            push16(PC)
+            PC = 0x0010
+            return 4
+        case .rst3:
+            push16(PC)
+            PC = 0x0018
+            return 4
+        case .rst4:
+            push16(PC)
+            PC = 0x0020
+            return 4
+        case .rst5:
+            push16(PC)
+            PC = 0x0028
+            return 4
+        case .rst6:
+            push16(PC)
+            PC = 0x0030
+            return 4
+        case .rst7:
+            push16(PC)
+            PC = 0x0038
+            return 4
         case .and_d8:
             let value = fetchByte()
             let result = registers[.A]! & value
@@ -988,6 +1347,50 @@ private extension CPU {
         case .popHL:
             HL = pop16()
             return 3
+        case .addHL_BC:
+            let full = UInt32(HL) + UInt32(BC)
+            let half = ((UInt32(HL) & 0x0FFF) + (UInt32(BC) & 0x0FFF)) > 0x0FFF
+            let carry = full > 0xFFFF
+
+            HL = UInt16(truncatingIfNeeded: full)
+            setFlags(z: Z, n: false, h: half, c: carry)
+            return 2
+        case .addHL_DE:
+            let full = UInt32(HL) + UInt32(DE)
+            let half = ((UInt32(HL) & 0x0FFF) + (UInt32(DE) & 0x0FFF)) > 0x0FFF
+            let carry = full > 0xFFFF
+
+            HL = UInt16(truncatingIfNeeded: full)
+            setFlags(z: Z, n: false, h: half, c: carry)
+            return 2
+        case .addHL_HL:
+            let full = UInt32(HL) + UInt32(HL)
+            let half = ((UInt32(HL) & 0x0FFF) + (UInt32(HL) & 0x0FFF)) > 0x0FFF
+            let carry = full > 0xFFFF
+
+            HL = UInt16(truncatingIfNeeded: full)
+            setFlags(z: Z, n: false, h: half, c: carry)
+            return 2
+        case .addHL_SP:
+            let full = UInt32(HL) + UInt32(SP)
+            let half = ((UInt32(HL) & 0x0FFF) + (UInt32(SP) & 0x0FFF)) > 0x0FFF
+            let carry = full > 0xFFFF
+
+            HL = UInt16(truncatingIfNeeded: full)
+            setFlags(z: Z, n: false, h: half, c: carry)
+            return 2
+        case .decBC:
+            BC &-= 1
+            return 2
+        case .decDE:
+            DE &-= 1
+            return 2
+        case .decHL:
+            HL &-= 1
+            return 2
+        case .decSP:
+            SP &-= 1
+            return 2
         case .incH:
             let old = registers[.H]!
             let value = old &+ 1
@@ -1036,6 +1439,14 @@ private extension CPU {
             N = false
             H = (old & 0x0F) == 0x0F
             return 1
+        case .inc_HL:
+            let old = mmu.read(HL)
+            let value = old &+ 1
+            mmu.write(value, to: HL)
+            Z = value == 0
+            N = false
+            H = (old & 0x0F) == 0x0F
+            return 2
         case .incL:
             let old = registers[.L]!
             let value = old &+ 1
@@ -1096,6 +1507,14 @@ private extension CPU {
             let old = registers[.A]!
             let value = old &- 1
             registers[.A] = value
+            Z = value == 0
+            N = true
+            H = (old & 0x0F) == 0x00
+            return 1
+        case .dec_HL:
+            let old = mmu.read(HL)
+            let value = old &- 1
+            mmu.write(value, to: HL)
             Z = value == 0
             N = true
             H = (old & 0x0F) == 0x00
@@ -1561,11 +1980,11 @@ class CPU {
 
     // Interrupt vectors (in bytes)
     private let interruptVectors: [UInt16] = [
-        0x40,  // V-Blank
-        0x48,  // LCD STAT
-        0x50,  // Timer
-        0x58,  // Serial
-        0x60   // Joypad
+        0x40, // V-Blank
+        0x48, // LCD STAT
+        0x50, // Timer
+        0x58, // Serial
+        0x60 // Joypad
     ]
 }
 
@@ -1584,7 +2003,7 @@ private extension CPU {
         get { (UInt16(registers[.B]!) << 8) | UInt16(registers[.C]!) }
         set {
             registers[.B] = UInt8((newValue >> 8) & 0xFF)
-            registers[.C] = UInt8(newValue & 0xF0) // lower 4 bits unused
+            registers[.C] = UInt8(newValue & 0xFF)
         }
     }
 
@@ -1592,7 +2011,7 @@ private extension CPU {
         get { (UInt16(registers[.D]!) << 8) | UInt16(registers[.E]!) }
         set {
             registers[.D] = UInt8((newValue >> 8) & 0xFF)
-            registers[.E] = UInt8(newValue & 0xF0) // lower 4 bits unused
+            registers[.E] = UInt8(newValue & 0xFF)
         }
     }
 
@@ -1600,7 +2019,7 @@ private extension CPU {
         get { (UInt16(registers[.H]!) << 8) | UInt16(registers[.L]!) }
         set {
             registers[.H] = UInt8((newValue >> 8) & 0xFF)
-            registers[.L] = UInt8(newValue & 0xF0) // lower 4 bits unused
+            registers[.L] = UInt8(newValue & 0xFF)
         }
     }
 
@@ -1659,7 +2078,7 @@ private extension CPU {
 
     // MARK: - Stack
     func pop16() -> UInt16 {
-        let low  = mmu.read(SP); SP &+= 1
+        let low = mmu.read(SP); SP &+= 1
         let high = mmu.read(SP); SP &+= 1
         return (UInt16(high) << 8) | UInt16(low)
     }
@@ -1679,7 +2098,7 @@ private extension CPU {
         func fbit(_ bit: Int) -> Int { Int((flags >> bit) & 1) }
 
         print(String(
-            format: "PC:%04X  OP:%02X  A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X Z:%d N:%d H:%d C:%d",
+            format: "PC:%04X  OP:%02X  AF:%02X%02X  BC:%02X%02X  DE:%02X%02X  HL:%02X%02X  SP:%04X Z:%d N:%d H:%d SP:%d IME:\(interruptMasterEnable)",
             PC - 1, opcode,
             registers[.A]!, flags,
             registers[.B]!, registers[.C]!,
@@ -1695,7 +2114,6 @@ extension CPU {
     // MARK: - Step
     func step() -> Int {
         var stepCount = 0
-        stepCount += serviceInterruptsIfNeeded()
         stepCount += executeNextInstruction()
         return stepCount * 4
     }
@@ -1720,7 +2138,7 @@ extension CPU {
     }
 }
 
-private extension CPU {
+extension CPU {
     /// Checks IF & IE & IME, and if any interrupt is pending:
     /// 1. disables IME
     /// 2. clears that IF bit
@@ -1731,15 +2149,15 @@ private extension CPU {
         guard interruptMasterEnable else { return 0 }
 
         // 2) read the two registers
-        let ifReg = mmu.read(0xFF0F)    // Interrupt Flag
-        let ieReg = mmu.read(0xFFFF)    // Interrupt Enable
+        let ifReg = mmu.read(0xFF0F) // Interrupt Flag
+        let ieReg = mmu.read(0xFFFF) // Interrupt Enable
 
         // 3) find any bit that is set in both IF and IE
         let pending = ifReg & ieReg
         guard pending != 0 else { return 0 }
 
         // 4) from highest priority (bit0) to lowest (bit4), find the first one
-        let bit = UInt8(pending.trailingZeroBitCount)  // index of first set bit
+        let bit = UInt8(pending.trailingZeroBitCount) // index of first set bit
         let vector = interruptVectors[Int(bit)]
 
         // 5) disable further interrupts until EI is executed again
@@ -1756,6 +2174,6 @@ private extension CPU {
         PC = vector
 
         // 9) the interrupt takes 5 machine‐cycles (20 T-cycles)
-        return 5
+        return 20
     }
 }

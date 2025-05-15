@@ -27,7 +27,9 @@ class EmulatorViewModel {
         emu.start()
     }
 
-    func stop() {}
+    func stop() {
+        emu.stop()
+    }
 
     private var emu: Emu!
 }

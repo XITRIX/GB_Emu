@@ -92,7 +92,8 @@ extension PPU {
         // 1) Background/Window
         for x in 0..<160 {
             let bgColor = fetchBgPixel(x: x, y: ly)
-            framebuffer[ly * 160 + x] = paletteToARGB(bgColor, isSprite: false, paletteIndex: 0)
+            let bgPalette = mmu.read(0xFF47)
+            framebuffer[ly * 160 + x] = paletteToARGB(bgColor, isSprite: false, paletteIndex: bgPalette)
         }
 
         // 2) Sprites

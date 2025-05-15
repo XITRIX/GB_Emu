@@ -30,6 +30,7 @@ struct RomSelectingView: View {
         .init(title: "10-bit ops", url: Bundle.main.url(forResource: "10-bit ops", withExtension: "gb")!),
         .init(title: "11-op a,(hl)", url: Bundle.main.url(forResource: "11-op a,(hl)", withExtension: "gb")!),
         .init(title: "2048", url: Bundle.main.url(forResource: "2048", withExtension: "gb")!),
+        .init(title: "Pokemon - Red Version (USA, Europe) (SGB Enhanced)", url: Bundle.main.url(forResource: "pmn", withExtension: "gb")!),
     ]
 
     @State private var importFile: Bool = false
