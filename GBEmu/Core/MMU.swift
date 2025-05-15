@@ -161,15 +161,15 @@ class MMU {
 
             if address == 0xFF01 {
                 let char = Character(UnicodeScalar(value))
-                print(char, terminator: "")
-                print("Serial register")
+//                print(char, terminator: "")
+//                print("Serial register")
             }
 
             // Serial port
-            if address == 0xFF02 {
-                let char = Character(UnicodeScalar(value))
-                print(char, terminator: "")
-            }
+//            if address == 0xFF02 {
+//                let char = Character(UnicodeScalar(value))
+//                print(char, terminator: "")
+//            }
             if address == 0xFF02, (value & 0x80) != 0 {
                 // Serial transfer requested:
                 let byte = io[0x01]

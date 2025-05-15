@@ -2092,7 +2092,7 @@ private extension CPU {
 
     // MARK: - Utils
     func logState(opcode: UInt8) {
-//        return
+        return
 
         let flags = registers[.F]!
         func fbit(_ bit: Int) -> Int { Int((flags >> bit) & 1) }
