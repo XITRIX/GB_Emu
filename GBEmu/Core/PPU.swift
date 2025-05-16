@@ -135,47 +135,39 @@ private extension PPU {
     /// Reads the background (or window) tilemap + tile data and returns the 0–3 colour number
     /// at screen-pixel (x, y). Respects SCX/SCY, LCDC.BG enable, tile‐map and tile‐data select.
     func fetchBgPixel(x: Int, y: Int) -> UInt8 {
-        let lcdc = mmu.read(0xff40)
-        // If BG is disabled, we always return colour 0
-        guard (lcdc & 0x01) != 0 else { return 0 }
+      let lcdc = mmu.read(0xff40)
+      guard (lcdc & 0x01) != 0 else { return 0 }
 
-        let scy = mmu.read(0xff42)
-        let scx = mmu.read(0xff43)
-        let bgY = UInt16(y) &+ UInt16(scy)
-        let bgX = UInt16(x) &+ UInt16(scx)
+      let scy = mmu.read(0xff42)
+      let scx = mmu.read(0xff43)
+      let bgY = UInt16(y) &+ UInt16(scy)
+      let bgX = UInt16(x) &+ UInt16(scx)
 
-        // Select which tile-map to use
-        let tileMapBase: UInt16 = (lcdc & 0x08) != 0 ? 0x9c00 : 0x9800
+      let tileMapBase: UInt16 = (lcdc & 0x08) != 0 ? 0x9c00 : 0x9800
+      let useUnsigned = (lcdc & 0x10) != 0
+      let tileDataBase: UInt16 = useUnsigned ? 0x8000 : 0x9000
 
-        // Select tile‐data area & signed vs unsigned indexing
-        let useUnsigned = (lcdc & 0x10) != 0
-        let tileDataBase: UInt16 = useUnsigned ? 0x8000 : 0x9000
+      // figure out which tile in the map
+      let mapRow = Int(bgY / 8) * 32
+      let mapCol = Int(bgX / 8)
+      let rawIndex = mmu.read(tileMapBase + UInt16(mapRow + mapCol))
 
-        // Which tile in the map?
-        let mapRow = (bgY / 8) * 32
-        let mapCol = (bgX / 8)
-        let tileIndexAddr = tileMapBase + mapRow + mapCol
-        let rawIndex = mmu.read(tileIndexAddr)
+      // signed vs unsigned tile number
+      let tileNumber = useUnsigned
+        ? Int(rawIndex)
+        : Int(Int8(bitPattern: rawIndex))
 
-        // Compute the actual tile # to use
-        let tileNumber: Int16 = useUnsigned
-            ? Int16(rawIndex)
-            // signed from –128 to +127
-            : Int16(Int8(bitPattern: rawIndex))
+      // which two bytes in that tile for this scanline?
+      let lineInTile = Int(bgY % 8) * 2
 
-        // Which line of the tile?
-        let lineInTile = (bgY % 8) * 2
-        let tileAddr = tileDataBase
-            + UInt16(tileNumber) * 16
-            + UInt16(lineInTile)
+      // do all of this in Int, so that tileNumber * 16 can be negative
+      let signedAddr = Int(tileDataBase) + (tileNumber * 16) + lineInTile
+      let lo = mmu.read(UInt16(signedAddr))
+      let hi = mmu.read(UInt16(signedAddr + 1))
 
-        let lo = mmu.read(tileAddr)
-        let hi = mmu.read(tileAddr + 1)
-
-        // Extract the bit for this pixel
-        let bit = 7 - (bgX % 8)
-        let colourNum = UInt8(((hi >> bit) & 1) << 1 | ((lo >> bit) & 1))
-        return colourNum
+      let bit = 7 - Int(bgX % 8)
+      let colorNum = UInt8(((hi >> bit) & 1) << 1 | ((lo >> bit) & 1))
+      return colorNum
     }
 
     /// Turns a colour number (0–3) plus a BGP/OBP0/OBP1 palette byte into a 32-bit ARGB shade.

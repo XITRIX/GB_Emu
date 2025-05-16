@@ -104,6 +104,7 @@ enum Opcode: UInt8 {
     case ldL_HL = 0x6E
     case ldA_HL = 0x7E
     case ldSP_HL = 0xF9
+    case ld_a16_SP = 0x08
     case jp_a16 = 0xC3
     case jpNZ_a16 = 0xC2
     case jpNC_a16 = 0xD2
@@ -115,6 +116,9 @@ enum Opcode: UInt8 {
     case jrNC_r8 = 0x30
     case jrZ_r8 = 0x28
     case jrC_r8 = 0x38
+    case daa = 0x27
+    case scf = 0x37
+    case cpl = 0x2F
     case addAB = 0x80
     case addAC = 0x81
     case addAD = 0x82
@@ -124,6 +128,11 @@ enum Opcode: UInt8 {
     case addA_HL = 0x86
     case addAA = 0x87
     case addA_d8 = 0xC6
+    case addHL_BC = 0x09
+    case addHL_DE = 0x19
+    case addHL_HL = 0x29
+    case addHL_SP = 0x39
+    case addSP_s8 = 0xE8
     case adcAB = 0x88
     case adcAC = 0x89
     case adcAD = 0x8A
@@ -142,6 +151,14 @@ enum Opcode: UInt8 {
     case sub_HL = 0x96
     case subA = 0x97
     case sub_d8 = 0xD6
+    case sbcAB = 0x98
+    case sbcAC = 0x99
+    case sbcAD = 0x9A
+    case sbcAE = 0x9B
+    case sbcAH = 0x9C
+    case sbcAL = 0x9D
+    case sbcA_HL = 0x9E
+    case sbcAA = 0x9F
     case andB = 0xA0
     case andC = 0xA1
     case andD = 0xA2
@@ -168,6 +185,14 @@ enum Opcode: UInt8 {
     case orL = 0xB5
     case or_HL = 0xB6
     case orA = 0xB7
+    case cpB = 0xB8
+    case cpC = 0xB9
+    case cpD = 0xBA
+    case cpE = 0xBB
+    case cpH = 0xBC
+    case cpL = 0xBD
+    case cp_HL = 0xBE
+    case cpA = 0xBF
     case rst0 = 0xC7
     case rst1 = 0xCF
     case rst2 = 0xD7
@@ -177,12 +202,15 @@ enum Opcode: UInt8 {
     case rst6 = 0xF7
     case rst7 = 0xFF
     case call_a16 = 0xCD
+    case callZ_a16 = 0xCC
     case callNZ_a16 = 0xC4
-    case retNZ = 0xC0
-    case retZ = 0xC8
-    case retNC = 0xD0
-    case retC = 0xD8
+    case callC_a16 = 0xDC
+    case callNC_a16 = 0xD4
     case ret = 0xC9
+    case retZ = 0xC8
+    case retNZ = 0xC0
+    case retC = 0xD8
+    case retNC = 0xD0
     case retI = 0xD9
     case pushBC = 0xC5
     case pushDE = 0xD5
@@ -192,10 +220,6 @@ enum Opcode: UInt8 {
     case popDE = 0xD1
     case popHL = 0xE1
     case popAF = 0xF1
-    case addHL_BC = 0x09
-    case addHL_DE = 0x19
-    case addHL_HL = 0x29
-    case addHL_SP = 0x39
     case decBC = 0x0B
     case decDE = 0x1B
     case decHL = 0x2B
@@ -244,7 +268,22 @@ enum CBOpcode: UInt8 {
     case slaH = 0x24
     case slaL = 0x25
     case slaA = 0x27
+    case swapB = 0x30
+    case swapC = 0x31
+    case swapD = 0x32
+    case swapE = 0x33
+    case swapH = 0x34
+    case swapL = 0x35
+    case swap_HL = 0x36
+    case swapA = 0x37
     case srlB = 0x38
+    case srlC = 0x39
+    case srlD = 0x3A
+    case srlE = 0x3B
+    case srlH = 0x3C
+    case srlL = 0x3D
+    case srl_HL = 0x3E
+    case srlA = 0x3F
     case bit0B = 0x40
     case bit0C = 0x41
     case bit0D = 0x42
@@ -671,6 +710,11 @@ private extension CPU {
         case .ldSP_HL:
             SP = HL
             return 2
+        case .ld_a16_SP:
+            let address = fetch2Bytes()
+            mmu.write(UInt8(SP & 0xFF), to: address)
+            mmu.write(UInt8((SP >> 8) & 0xFF), to: address &+ 1)
+            return 5
         case .jp_a16: // JP a16
             PC = fetch2Bytes()
             return 4
@@ -759,6 +803,50 @@ private extension CPU {
             }
 
             return 2
+        case .daa:
+            // Get A and the current flags
+            var a = registers[.A]!
+            let nFlag = N // did last op subtract?
+            var adjust: UInt8 = 0
+            var carryOut = C
+
+            if !nFlag {
+                // After ADD
+                if H || (a & 0x0F) > 9 {
+                    adjust |= 0x06
+                }
+                if C || a > 0x99 {
+                    adjust |= 0x60
+                    carryOut = true
+                }
+                a = a &+ adjust
+            } else {
+                // After SUB
+                if H {
+                    adjust |= 0x06
+                }
+                if C {
+                    adjust |= 0x60
+                }
+                a = a &- adjust
+            }
+
+            registers[.A] = a
+
+            // Flags: Z set if A==0, N unchanged, H cleared, C updated
+            Z = (a == 0)
+            H = false
+            C = carryOut
+
+            return 1
+        case .scf:
+            setFlags(z: Z, n: false, h: false, c: true)
+            return 1
+        case .cpl:
+            registers[.A] = ~registers[.A]!
+            N = true
+            H = true
+            return 1
         case .addAB:
             let first = registers[.A]!
             let second = registers[.B]!
@@ -1092,6 +1180,110 @@ private extension CPU {
             C = oldA < value
 
             return 2
+        case .sbcAB:
+            let oldA = registers[.A]!
+            let value = registers[.B]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcAC:
+            let oldA = registers[.A]!
+            let value = registers[.C]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcAD:
+            let oldA = registers[.A]!
+            let value = registers[.D]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcAE:
+            let oldA = registers[.A]!
+            let value = registers[.E]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcAH:
+            let oldA = registers[.A]!
+            let value = registers[.H]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcAL:
+            let oldA = registers[.A]!
+            let value = registers[.L]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
+        case .sbcA_HL:
+            let oldA = registers[.A]!
+            let value = mmu[HL]
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 2
+        case .sbcAA:
+            let oldA = registers[.A]!
+            let value = registers[.A]!
+            let carryIn: UInt8 = C ? 1 : 0
+            let result = oldA &- value &- carryIn
+            registers[.A] = result
+
+            Z = result == 0
+            N = true
+            H = (oldA & 0xF) < ((value &+ carryIn) & 0xF)
+            C = oldA < value &+ carryIn
+
+            return 1
         case .andB:
             registers[.A]! &= registers[.B]!
             setFlags(z: registers[.A] == 0, n: false, h: true, c: false)
@@ -1231,6 +1423,86 @@ private extension CPU {
             let zFlag: UInt8 = 1 << 7
             registers[.F] = (result == 0) ? zFlag : 0
             return 1
+        case .cpB:
+            let a = registers[.A]!
+            let value = registers[.B]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cpC:
+            let a = registers[.A]!
+            let value = registers[.C]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cpD:
+            let a = registers[.A]!
+            let value = registers[.D]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cpE:
+            let a = registers[.A]!
+            let value = registers[.E]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cpH:
+            let a = registers[.A]!
+            let value = registers[.H]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cpL:
+            let a = registers[.A]!
+            let value = registers[.L]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
+        case .cp_HL:
+            let a = registers[.A]!
+            let value = mmu[HL]
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 2
+        case .cpA:
+            let a = registers[.A]!
+            let value = registers[.A]!
+            let result = a &- value
+
+            let halfBorrow = (a & 0x0F) < (value & 0x0F)
+            let fullBorrow = a < value
+            setFlags(z: result == 0, n: true, h: halfBorrow, c: fullBorrow)
+
+            return 1
         case .rst0:
             push16(PC)
             PC = 0x0000
@@ -1281,9 +1553,42 @@ private extension CPU {
             // Jump to address
             PC = address
             return 6
+        case .callZ_a16:
+            let address = fetch2Bytes()
+            if Z {
+                push16(PC)
+
+                // Jump to address
+                PC = address
+                return 6
+            }
+
+            return 3
         case .callNZ_a16:
             let address = fetch2Bytes()
             if !Z {
+                push16(PC)
+
+                // Jump to address
+                PC = address
+                return 6
+            }
+
+            return 3
+        case .callC_a16:
+            let address = fetch2Bytes()
+            if C {
+                push16(PC)
+
+                // Jump to address
+                PC = address
+                return 6
+            }
+
+            return 3
+        case .callNC_a16:
+            let address = fetch2Bytes()
+            if !C {
                 push16(PC)
 
                 // Jump to address
@@ -1379,6 +1684,20 @@ private extension CPU {
             HL = UInt16(truncatingIfNeeded: full)
             setFlags(z: Z, n: false, h: half, c: carry)
             return 2
+        case .addSP_s8:
+            // Read signed 8-bit displacement
+            let raw = fetchByte() // PC was incremented once for opcode fetch, now again for displacement
+            let offset = Int8(bitPattern: raw) // Interpret as signed
+
+            let delta = UInt16(bitPattern: Int16(offset))
+
+            let halfCarry = ((SP & 0x0F) + (delta & 0x0F)) > 0x0F
+            let carry = ((SP & 0xFF) + (delta & 0xFF)) > 0xFF
+
+            SP &+= delta
+            setFlags(z: false, n: false, h: halfCarry, c: carry)
+
+            return 4
         case .decBC:
             BC &-= 1
             return 2
@@ -1679,10 +1998,101 @@ private extension CPU {
             registers[.A] = result
             setFlags(z: result == 0, n: false, h: false, c: CY)
             return 2
+        case .swapB:
+            let value = registers[.B]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.B] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swapC:
+            let value = registers[.C]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.C] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swapD:
+            let value = registers[.D]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.D] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swapE:
+            let value = registers[.E]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.E] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swapH:
+            let value = registers[.H]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.H] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swapL:
+            let value = registers[.L]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.L] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
+        case .swap_HL:
+            let value = mmu[HL]
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            mmu[HL] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 4
+        case .swapA:
+            let value = registers[.A]!
+            let result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4)
+            registers[.A] = result
+            setFlags(z: result == 0, n: false, h: false, c: false)
+            return 2
         case .srlB:
             let CY = registers[.B]! & 1 == 1
             let result = registers[.B]! >> 1
             registers[.B] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srlC:
+            let CY = registers[.C]! & 1 == 1
+            let result = registers[.C]! >> 1
+            registers[.C] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srlD:
+            let CY = registers[.D]! & 1 == 1
+            let result = registers[.D]! >> 1
+            registers[.D] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srlE:
+            let CY = registers[.E]! & 1 == 1
+            let result = registers[.E]! >> 1
+            registers[.E] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srlH:
+            let CY = registers[.H]! & 1 == 1
+            let result = registers[.H]! >> 1
+            registers[.H] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srlL:
+            let CY = registers[.L]! & 1 == 1
+            let result = registers[.L]! >> 1
+            registers[.L] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 2
+        case .srl_HL:
+            let value = mmu[HL]
+            let CY = value & 1 == 1
+            let result = value >> 1
+            mmu[HL] = result
+            setFlags(z: result == 0, n: false, h: false, c: CY)
+            return 4
+        case .srlA:
+            let CY = registers[.A]! & 1 == 1
+            let result = registers[.A]! >> 1
+            registers[.A] = result
             setFlags(z: result == 0, n: false, h: false, c: CY)
             return 2
         case .bit0B:
