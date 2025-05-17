@@ -14,13 +14,15 @@ class Emu {
         mmu = MMU(rom: [UInt8](rom))
         cpu = CPU(mmu: mmu)
         ppu = PPU(mmu: mmu)
+        apu = APU(mmu: mmu)
 
-        emulatorLoop = .init(cpu: cpu, ppu: ppu, render: render)
+        emulatorLoop = .init(cpu: cpu, ppu: ppu, apu: apu, render: render)
     }
 
     let cpu: CPU
     let mmu: MMU
     let ppu: PPU
+    let apu: APU
 
     private var emulatorLoop: EmulatorLoop!
 }
