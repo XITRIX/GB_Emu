@@ -160,7 +160,7 @@ class MMU {
             }
 
             if address == 0xFF01 {
-                let char = Character(UnicodeScalar(value))
+//                let char = Character(UnicodeScalar(value))
 //                print(char, terminator: "")
 //                print("Serial register")
             }
