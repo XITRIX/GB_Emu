@@ -19,12 +19,16 @@ class EmulatorLoop {
     let cpu: CPU
     let ppu: PPU
     let mmu: MMU
+    let apu: APU
+    let audioDriver: AudioDriver
 
-    init(cpu: CPU, ppu: PPU, render: @escaping ([UInt32]) -> Void) {
+    init(cpu: CPU, ppu: PPU, apu: APU, render: @escaping ([UInt32]) -> Void) {
         self.cpu = cpu
         self.ppu = ppu
-        self.render = render
+        self.apu = apu
         self.mmu = cpu.mmu
+        self.render = render
+        audioDriver = .init(emulatorAPU: apu)
     }
 
     func start() {
@@ -32,9 +36,11 @@ class EmulatorLoop {
         running = true
         lastTime = .now()
         queue.async { self.runLoop() }
+//        audioDriver.start()
     }
 
     func stop() {
+//        audioDriver.stop()
         running = false
     }
 
@@ -59,7 +65,7 @@ class EmulatorLoop {
                 var used = cpu.step() // returns cycles used by instruction
                 ppu.step(cycles: used)
                 mmu.step(cycles: used)
-                // TODO: timers, interrupts
+                apu.step(cycles: used)
                 used += cpu.serviceInterruptsIfNeeded()
                 cycles += used
             }

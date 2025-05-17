@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 enum Interrupt: UInt8 {
     /// V-Blank (bit 0)
@@ -24,6 +25,8 @@ enum Interrupt: UInt8 {
 }
 
 class MMU {
+    let writePublisher: PassthroughSubject<(UInt16, UInt8), Never> = .init()
+
     private let memoryBankController: MBC
     var vram: [UInt8] = Array(repeating: 0, count: 0x2000)
     private var wram: [UInt8] = Array(repeating: 0, count: 0x2000)
@@ -122,6 +125,8 @@ class MMU {
     }
 
     func write(_ value: UInt8, to address: UInt16) {
+        writePublisher.send((address, value))
+
         switch address {
         // ROM adresses
         case 0x0000...0x7FFF, 0xA000...0xBFFF:
