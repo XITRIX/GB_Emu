@@ -688,7 +688,6 @@ private extension CPU {
             let off = fetchByte()
             let addr = UInt16(0xFF00) &+ UInt16(off)
             let m = mmu.read(addr)
-//            print("LDH @FF00+\(String(format: "%02X", off)) → \(String(format: "%02X", m))")
             registers[.A] = m
             return 3
         case .ldB_d8: // LD B, n
@@ -2025,9 +2024,6 @@ private extension CPU {
             H = (a & 0xF) < (value & 0xF) // H: set if there was a borrow from bit 4 (a&0xF < value&0xF)
             C = a < value // C: set if there was a borrow (a < value)
 
-//            print("CP A(\(String(format: "%02X", a))) - \(String(format: "%02X", value)) = \(String(format: "%02X", res))",
-//                  "flags Z\(Z) N\(N) H\(H) C\(C)")
-
             return 2
         case .rlca:
             let old = registers[.A]!
@@ -2067,7 +2063,7 @@ private extension CPU {
             _ = fetchByte()
             stopped = true
             mmu.write(0, to: 0xFF04) // Divider reset
-            print("CPU stopped")
+            Logger.log("CPU stopped")
             return 1
         case .halt:
             halted = true
@@ -2075,7 +2071,7 @@ private extension CPU {
         case .cb:
             return executeNextCBInstruction()
         case .none:
-            print("Unknown opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
+            Logger.log("Unknown opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
             halted = true
             return 1
         }
@@ -2944,7 +2940,7 @@ private extension CPU {
         case .set7A:
             return setBit(7, in: &registers[.A]!)
         case .none:
-            print("Unknown CB opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
+            Logger.log("Unknown CB opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
             halted = true
             return 1
         }
@@ -3104,7 +3100,7 @@ private extension CPU {
         let flags = registers[.F]!
         func fbit(_ bit: Int) -> Int { Int((flags >> bit) & 1) }
 
-        print(String(
+        Logger.log(String(
             format: "PC:%04X  OP:%02X  AF:%02X%02X  BC:%02X%02X  DE:%02X%02X  HL:%02X%02X  SP:%04X Z:%d N:%d H:%d SP:%d IME:\(interruptMasterEnable)",
             PC - 1, opcode,
             registers[.A]!, flags,
@@ -3113,7 +3109,7 @@ private extension CPU {
             registers[.H]!, registers[.L]!,
             SP,
             fbit(7), fbit(6), fbit(5), fbit(4)
-        ))
+        ), ignoreXcodeLog: true)
     }
 }
 

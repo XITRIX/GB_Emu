@@ -28,6 +28,7 @@ class EmulatorLoop {
     }
 
     func start() {
+        guard !running else { return }
         running = true
         lastTime = .now()
         queue.async { self.runLoop() }

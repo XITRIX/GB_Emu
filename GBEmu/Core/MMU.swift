@@ -149,7 +149,6 @@ class MMU {
             }
 
             io[Int(address - 0xFF00)] = value
-//            print(String(format: "IO-WRITE @%04X ← %02X", address, value))
 
             if address == 0xFF00 {
                 // CPU is selecting which half of the pad it wants to read:
@@ -174,7 +173,7 @@ class MMU {
                 // Serial transfer requested:
                 let byte = io[0x01]
                 let char = Character(UnicodeScalar(byte))
-                print(char, terminator: "")
+                Logger.log("\(char)", terminator: "")
             }
         case 0xFF80...0xFFFE: hram[Int(address - 0xFF80)] = value
         case 0xFFFF: interruptEnable = value

@@ -46,7 +46,7 @@ extension MBC {
 
         // --- NOT RAM/ROM ADDRESS ---
         default:
-            print("Reading from address \(String(format: "%04x", address)) is not allowed, valid range is 0x0000...0x7FFF")
+            Logger.log("Reading from address \(String(format: "%04x", address)) is not allowed, valid range is 0x0000...0x7FFF")
             return 0xFF
         }
     }
@@ -80,7 +80,7 @@ extension MBC {
 
         // --- NOT RAM/ROM ADDRESS ---
         default:
-            print("Writing to address \(String(format: "%04x", address)) is not allowed")
+            Logger.log("Writing to address \(String(format: "%04x", address)) is not allowed")
         }
     }
 }

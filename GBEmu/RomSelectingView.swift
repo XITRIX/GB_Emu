@@ -78,7 +78,7 @@ struct RomSelectingView: View {
                         romData = data
                     }
                 case .failure(let error):
-                    print("File import failed: \(error)")
+                    Logger.log("File import failed: \(error)")
                 }
             }
         }
