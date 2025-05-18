@@ -44,6 +44,14 @@ class EmulatorViewModel {
         emu.stop()
     }
 
+    func setKeyPressed(_ isPressed: Bool, at index: UInt8) {
+        if isPressed {
+            joypadState &= ~index
+        } else {
+            joypadState |= index
+        }
+    }
+
     private var emu: Emu!
 }
 
@@ -51,34 +59,50 @@ struct EmulatorView: View {
     @State private var viewModel: EmulatorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let virtualController: GCVirtualController
+    @State var isLogsVisible: Bool = false
 
     init(rom: Data) {
         _viewModel = State(initialValue: .init(rom: rom))
 
         let configuration = GCVirtualController.Configuration()
-        configuration.elements = [GCInputDirectionPad, GCInputButtonB, GCInputButtonA]
+        configuration.elements = [GCInputDirectionPad, GCInputButtonB, GCInputButtonA, GCInputButtonX, GCInputButtonY]
         virtualController = GCVirtualController(configuration: configuration)
     }
 
     var body: some View {
         VStack {
-            ScrollView {
-                TextEditor(text: .constant(viewModel.logs))
-                    .disabled(true)
-//                    .ignoresSafeArea(.all, edges: .top)
+            if isLogsVisible {
+                ScrollView {
+                    TextEditor(text: .constant(viewModel.logs))
+                        .disabled(true)
+                    //                    .ignoresSafeArea(.all, edges: .top)
+                }
+                .frame(minHeight: 380)
+                //            .ignoresSafeArea(.all, edges: .top)
+                .defaultScrollAnchor(.bottom)
             }
-            .frame(minHeight: 380)
-//            .ignoresSafeArea(.all, edges: .top)
-            .defaultScrollAnchor(.bottom)
 
             PixelImageView(pixels: $viewModel.imageData)
                 .frame(width: 320, height: 240)
 
-            KeyboardView(keysInput: $viewModel.joypadState)
+//            Spacer()
+//
+//            KeyboardView(keysInput: $viewModel.joypadState)
         }
         .ignoresSafeArea(.all, edges: .top)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isLogsVisible.toggle()
+                } label: {
+                    if isLogsVisible {
+                        Image(systemName: "apple.terminal.fill")
+                    } else {
+                        Image(systemName: "apple.terminal")
+                    }
+                }
+
+
                 if viewModel.isRunning {
                     Button {
                         viewModel.stop()
@@ -100,6 +124,17 @@ struct EmulatorView: View {
         .onAppear {
             viewModel.start()
             virtualController.connect()
+
+            if let controller = virtualController.controller?.extendedGamepad {
+                controller.buttonA.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 0) }
+                controller.buttonB.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 1) }
+                controller.buttonX.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 2) }
+                controller.buttonY.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 3) }
+                controller.dpad.right.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 4) }
+                controller.dpad.left.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 5) }
+                controller.dpad.up.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 6) }
+                controller.dpad.down.valueChangedHandler = { [viewModel] _, _, pressed in viewModel.setKeyPressed(pressed, at: 1 << 7) }
+            }
         }
         .onDisappear {
             viewModel.stop()

@@ -11,7 +11,7 @@ class EmulatorLoop {
     private let queue = DispatchQueue(label: "com.gbemu.loop")
     private var running = false
     private var lastTime: DispatchTime = .now()
-    private let targetFPS: Double = 60.0
+    private let targetFPS: Double = 70.0
     private let cyclesPerFrame = 70224
 
     private let render: ([UInt32]) -> Void
@@ -36,11 +36,11 @@ class EmulatorLoop {
         running = true
         lastTime = .now()
         queue.async { self.runLoop() }
-//        audioDriver.start()
+        audioDriver.start()
     }
 
     func stop() {
-//        audioDriver.stop()
+        audioDriver.stop()
         running = false
     }
 

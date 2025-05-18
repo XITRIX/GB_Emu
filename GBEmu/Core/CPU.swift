@@ -524,6 +524,7 @@ private extension CPU {
     func executeNextInstruction() -> Int {
         guard !halted else { return 1 }
 
+        let currentPC = PC
         let opcode = fetchByte()
         logState(opcode: opcode)
 
@@ -733,7 +734,7 @@ private extension CPU {
             return 2
         case .ldHL_d8:
             mmu.write(fetchByte(), to: HL)
-            return 2
+            return 3
         case .ldHL_B:
             mmu.write(registers[.B]!, to: HL)
             return 2
@@ -1928,7 +1929,7 @@ private extension CPU {
             Z = value == 0
             N = false
             H = (old & 0x0F) == 0x0F
-            return 2
+            return 3
         case .incL:
             let old = registers[.L]!
             let value = old &+ 1
@@ -2000,7 +2001,7 @@ private extension CPU {
             Z = value == 0
             N = true
             H = (old & 0x0F) == 0x00
-            return 1
+            return 3
         case .incBC:
             BC &+= 1
             return 2
@@ -2062,7 +2063,7 @@ private extension CPU {
         case .stop:
             _ = fetchByte()
             stopped = true
-            mmu.write(0, to: 0xFF04) // Divider reset
+//            mmu.write(0, to: 0xFF04) // Divider reset
             Logger.log("CPU stopped")
             return 1
         case .halt:
@@ -2071,13 +2072,14 @@ private extension CPU {
         case .cb:
             return executeNextCBInstruction()
         case .none:
-            Logger.log("Unknown opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
+            Logger.log("Unknown opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", currentPC))")
             halted = true
             return 1
         }
     }
 
     func executeNextCBInstruction() -> Int {
+        let currentPC = PC
         let opcode = fetchByte()
         logState(opcode: opcode)
 
@@ -2940,7 +2942,7 @@ private extension CPU {
         case .set7A:
             return setBit(7, in: &registers[.A]!)
         case .none:
-            Logger.log("Unknown CB opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", PC - 1))")
+            Logger.log("Unknown CB opcode: \(String(format: "%02X", opcode)) at PC: \(String(format: "%04X", currentPC))")
             halted = true
             return 1
         }

@@ -11,20 +11,59 @@ struct KeyboardView: View {
     @Binding var keysInput: UInt8
 
     var body: some View {
-        VStack {
-            HStack {
-                KeyboardButton(keysInput: $keysInput, index: 1 << 0, label: "A")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 1, label: "B")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 2, label: "Select")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 3, label: "Start")
+        HStack {
+            VStack {
+                HStack {
+                    EmptyKeySpace()
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 6, label: "U")
+                    EmptyKeySpace()
+                }
+                HStack {
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 5, label: "L")
+                    EmptyKeySpace()
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 4, label: "R")
+                }
+                HStack {
+                    EmptyKeySpace()
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 7, label: "D")
+                    EmptyKeySpace()
+                }
             }
-            HStack {
-                KeyboardButton(keysInput: $keysInput, index: 1 << 4, label: "R")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 5, label: "L")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 6, label: "U")
-                KeyboardButton(keysInput: $keysInput, index: 1 << 7, label: "D")
+
+            Spacer()
+
+            VStack {
+                HStack {
+                    EmptyKeySpace()
+                    EmptyKeySpace()
+                }
+                HStack {
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 2, label: "Select")
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 3, label: "Start")
+                }
+            }
+
+            Spacer()
+
+            VStack {
+                HStack {
+                    EmptyKeySpace()
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 0, label: "A")
+                }
+                HStack {
+                    KeyboardButton(keysInput: $keysInput, index: 1 << 1, label: "B")
+                    EmptyKeySpace()
+                }
             }
         }
+    }
+}
+
+struct EmptyKeySpace: View {
+    var body: some View {
+        Spacer()
+            .background(Color.orange)
+            .frame(width: 54, height: 54)
     }
 }
 

@@ -29,11 +29,11 @@ class AudioDriver {
                 // Mix one stereo sample
                 let (l, r) = emulatorAPU.ring.read() ?? (0, 0)
 
-                if l == 0, r == 0 {
-//                  print("🔇 silent sample at \(Date())")
-                } else {
-                    print("🔊 sample = \(l),\(r)")
-                }
+//                if l == 0, r == 0 {
+////                  print("🔇 silent sample at \(Date())")
+//                } else {
+////                    print("🔊 sample = \(l),\(r)")
+//                }
 
                 // convert Int16 → Float in –1…+1
                 let fL = Float32(l) / Float32(Int16.max)
