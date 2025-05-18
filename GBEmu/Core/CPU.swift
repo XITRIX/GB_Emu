@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Register: Int {
+enum Register: Int, Codable {
     case A, F, B, C, D, E, H, L
 //    case SP, PC
 }
@@ -2965,6 +2965,17 @@ private extension CPU {
     }
 }
 
+extension CPU {
+    struct State: Codable {
+        var registers: [Register: UInt8]
+        var PC: UInt16
+        var SP: UInt16
+        var interruptMasterEnable: Bool
+        var halted: Bool
+        var stopped: Bool
+    }
+}
+
 class CPU {
     init(mmu: MMU) {
         self.mmu = mmu
@@ -2991,6 +3002,21 @@ class CPU {
         0x58, // Serial
         0x60 // Joypad
     ]
+}
+
+extension CPU {
+    func saveState() -> State {
+        .init(registers: registers, PC: PC, SP: SP, interruptMasterEnable: interruptMasterEnable, halted: halted, stopped: stopped)
+    }
+
+    func loadState(_ state: State) {
+        registers = state.registers
+        PC = state.PC
+        SP = state.SP
+        interruptMasterEnable = state.interruptMasterEnable
+        halted = state.halted
+        stopped = state.stopped
+    }
 }
 
 // MARK: - Helpers

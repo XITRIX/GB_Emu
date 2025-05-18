@@ -5,6 +5,17 @@
 //  Created by Daniil Vinogradov on 14/05/2025.
 //
 
+extension MBC {
+    struct State: Codable {
+        var rom: [UInt8]
+        var extRamBanks: [[UInt8]]
+        var romBankLow5: UInt8
+        var romBankHigh2: UInt8
+        var bankingMode: UInt8
+        var ramEnabled: Bool
+    }
+}
+
 class MBC {
     init(rom: [UInt8]) {
         self.rom = rom
@@ -20,6 +31,28 @@ class MBC {
     private var romBankHigh2: UInt8 = 0 // bits 5–6
     private var bankingMode: UInt8 = 0 // 0 = ROM, 1 = RAM
     private var ramEnabled = false
+}
+
+extension MBC {
+    func saveState() -> MBC.State {
+        return .init(
+            rom: rom,
+            extRamBanks: extRamBanks,
+            romBankLow5: romBankLow5,
+            romBankHigh2: romBankHigh2,
+            bankingMode: bankingMode,
+            ramEnabled: ramEnabled
+        )
+    }
+
+    func loadState(_ state: MBC.State) {
+        self.rom = state.rom
+        self.extRamBanks = state.extRamBanks
+        self.romBankLow5 = state.romBankLow5
+        self.romBankHigh2 = state.romBankHigh2
+        self.bankingMode = state.bankingMode
+        self.ramEnabled = state.ramEnabled
+    }
 }
 
 extension MBC {

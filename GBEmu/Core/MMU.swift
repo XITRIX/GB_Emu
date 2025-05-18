@@ -24,6 +24,48 @@ enum Interrupt: UInt8 {
     var mask: UInt8 { 1 << rawValue }
 }
 
+extension MMU {
+    struct State: Codable {
+        var mbcState: MBC.State
+        var vram: [UInt8]
+        var wram: [UInt8]
+        var oam: [UInt8]
+        var hram: [UInt8]
+        var io: [UInt8]
+        var interruptEnable: UInt8
+        var localJoypadState: UInt8
+        var divCounter: UInt16
+        var timerSubcounter: Int
+    }
+
+    func saveState() -> State {
+        .init(
+            mbcState: memoryBankController.saveState(),
+            vram: vram,
+            wram: wram,
+            oam: oam,
+            hram: hram,
+            io: io,
+            interruptEnable: interruptEnable,
+            localJoypadState: localJoypadState,
+            divCounter: divCounter,
+            timerSubcounter: timerSubcounter)
+    }
+
+    func loadState(_ state: State) {
+        memoryBankController.loadState(state.mbcState)
+        vram = state.vram
+        wram = state.wram
+        oam = state.oam
+        hram = state.hram
+        io = state.io
+        interruptEnable = state.interruptEnable
+        localJoypadState = state.localJoypadState
+        divCounter = state.divCounter
+        timerSubcounter = state.timerSubcounter
+    }
+}
+
 class MMU {
     let writePublisher: PassthroughSubject<(UInt16, UInt8), Never> = .init()
 

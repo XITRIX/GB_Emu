@@ -52,6 +52,18 @@ class EmulatorViewModel {
         }
     }
 
+    func save() {
+        Task {
+            await emu.saveState()
+        }
+    }
+
+    func load() {
+        Task {
+            await emu.loadState()
+        }
+    }
+
     private var emu: Emu!
 }
 
@@ -93,6 +105,22 @@ struct EmulatorView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    viewModel.save()
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.load()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     isLogsVisible.toggle()
                 } label: {
                     if isLogsVisible {
@@ -101,8 +129,9 @@ struct EmulatorView: View {
                         Image(systemName: "apple.terminal")
                     }
                 }
+            }
 
-
+            ToolbarItem(placement: .topBarTrailing) {
                 if viewModel.isRunning {
                     Button {
                         viewModel.stop()
